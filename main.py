@@ -110,15 +110,12 @@ async def server_error(request: Request, exc):
 # Static files
 app.mount("/static", StaticFiles(directory="web/static"), name="static")
 
-silrod_local = os.path.join(os.path.dirname(__file__), "silrod_core_static")
-if os.path.exists(silrod_local):
-    app.mount("/static/silrod", StaticFiles(directory=silrod_local), name="silrod-static")
-
+# Mount silrod-ui shared CSS
 try:
     from silrod_ui import get_static_dir
     silrod_static = get_static_dir()
-    if os.path.exists(silrod_static) and silrod_static != silrod_local:
-        app.mount("/static/silrod", StaticFiles(directory=silrod_static), name="silrod-static-fallback")
+    if os.path.exists(silrod_static):
+        app.mount("/static/silrod", StaticFiles(directory=silrod_static), name="silrod-static")
 except ImportError:
     pass
 

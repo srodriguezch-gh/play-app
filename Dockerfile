@@ -10,8 +10,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
+COPY wheels silrod-core-wheels
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir --find-links=/app/silrod-core-wheels silrod-core silrod-primitives
 
 # Runtime stage
 FROM python:3.12-slim-bookworm

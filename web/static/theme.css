@@ -1,19 +1,38 @@
-/* Game Hub theme overrides */
+/* game-hub theme — app-specific styles only */
+/* Shared components are in /static/silrod/css/silrod-components.css */
 
-body { font-family: 'Inter', sans-serif; }
-
-.text-\[10px\] { font-size: 11px; }
-
-.game-board td { width: 60px; height: 60px; text-align: center; font-size: 2rem; cursor: pointer; user-select: none; }
-.game-board td:hover { filter: brightness(0.95); }
-
-/* Mobile */
-@media (max-width: 640px) {
-    main { padding: 1rem 0.75rem !important; }
-    .grid { gap: 0.75rem !important; }
-    button, a, input, select, textarea { min-height: 44px; }
-    .game-board td { width: 44px; height: 44px; font-size: 1.5rem; }
+:root {
+  --bg-page: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-sidebar: #f8fafc;
+  --bg-input: #ffffff;
+  --bg-muted: #f1f5f9;
+  --border-color: #e2e8f0;
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-light: rgba(37, 99, 235, 0.1);
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --radius: 8px;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-dropdown: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
-@media (max-width: 375px) {
-    main { padding: 0.5rem !important; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-page);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
 }
+
+button, a, [role="button"] { min-height: 44px; min-width: 44px; }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-muted); }
+::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
