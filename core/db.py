@@ -78,6 +78,22 @@ class PlayerCollection(Base):
     )
 
 
+class Achievement(Base):
+    __tablename__ = "achievements"
+
+    id = Column(Integer, primary_key=True)
+    platform = Column(String(50), nullable=False)  # 'steam', 'epic'
+    game_id = Column(String(100), nullable=False)
+    achievement_id = Column(String(100), nullable=False)
+    title = Column(String(255), nullable=False)
+    achieved = Column(Boolean, default=False)
+    timestamp = Column(DateTime, nullable=True)
+
+    __table_args__ = (
+        Index("ix_platform_game_achievement", "platform", "game_id", "achievement_id", unique=True),
+    )
+
+
 async def init_db():
     """Create all tables if they don't exist."""
     async with engine.begin() as conn:

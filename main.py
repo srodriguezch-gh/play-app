@@ -2,6 +2,7 @@
 
 import logging
 import os
+import asyncio
 from contextlib import asynccontextmanager
 
 import socketio
@@ -16,17 +17,32 @@ from core.logging_config import setup_logging
 from web.routes import players, tasks
 from core.game_manager import game_manager
 from web import socket_events
+from services.platform_scraper import PlatformScraper
 
 settings = get_settings()
 setup_logging()
 logger = logging.getLogger(__name__)
+
+scraper = PlatformScraper()
+
+async def achievement_scraper_task():
+    while True:
+        try:
+            logger.info("Running achievement scraper")
+            # For now just log
+            await scraper.fetch_achievements("steam", "demo_game")
+        except Exception as e:
+            logger.error(f"Error in achievement scraper: {e}")
+        await asyncio.sleep(60 * 60) # Every hour
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info(f"Starting {settings.APP_NAME} {settings.APP_VERSION}")
     game_manager.cleanup()
+    scraper_task = asyncio.create_task(achievement_scraper_task())
     yield
+    scraper_task.cancel()
     logger.info(f"Shutting down {settings.APP_NAME}")
 
 
