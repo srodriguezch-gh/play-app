@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.git/
+.gitignore
+.env
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.github/
+docs/
+.slim/
+node_modules/
+.venv/

@@ -25,12 +25,7 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str = ""
 
-    NTFY_TOPIC: str = "9935-srodriguezch-alerts"
-
     CORS_ORIGINS: str = "https://play.silrod.org,http://localhost:3001"
-
-    RATE_LIMIT_WINDOW_MS: int = 60000
-    RATE_LIMIT_MAX_REQUESTS: int = 100
 
     def build_database_url(self) -> str:
         if self.DATABASE_URL:
