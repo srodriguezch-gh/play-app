@@ -36,6 +36,7 @@ class RPSMoveRequest(BaseModel):
 
 
 class ConnectFourMoveRequest(BaseModel):
+    room_id: str
     col: int
     player: str
 

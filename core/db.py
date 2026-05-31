@@ -27,7 +27,7 @@ class Player(Base):
     wins = Column(Integer, default=0)
     losses = Column(Integer, default=0)
     game_wins = Column(JSON, default=dict)
-    selfie = Column(Text, nullable=True)
+    selfie = Column(Boolean, default=False, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 

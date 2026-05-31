@@ -52,7 +52,7 @@ async def login(data: LoginRequest, session: AsyncSession = Depends(get_session)
     raise HTTPException(status_code=401 if "Incorrect" in message else 400, detail=message)
 
 
-@router.post("/api/admin/reset-pin")
+@router.post("/admin/reset-pin")
 async def reset_pin(data: ResetPinRequest, session: AsyncSession = Depends(get_session)):
     result = await session.execute(select(Player).where(Player.name == data.name))
     player = result.scalar_one_or_none()

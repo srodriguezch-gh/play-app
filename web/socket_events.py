@@ -185,14 +185,16 @@ def register_events(sio: socketio.AsyncServer):
     @sio.event
     async def gameEnd(sid, data: dict):
         winner = data.get("winner")
-        loser = data.get("losers")
+        loser = data.get("loser")
         game = data.get("game")
-        if not winner or not game:
+        if not winner or not game or winner.lower() == "draw":
             return
         async with async_session() as session:
             # Update winner stats
             result = await session.execute(select(Player).where(Player.name == winner))
             winner_player = result.scalar_one_or_none()
+            if not winner_player:
+                return
             if winner_player:
                 game_wins = dict(winner_player.game_wins) if isinstance(winner_player.game_wins, dict) else {}
                 game_wins[game] = game_wins.get(game, 0) + 1

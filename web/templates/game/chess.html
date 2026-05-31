@@ -141,6 +141,20 @@
                 document.getElementById("move-history").textContent = moveHistory.join(' ');
             }
             renderBoard(currentFen);
+            if (data.game_over && data.winner) {
+                const human = GameHub.getPlayer();
+                let winner, loser;
+                if (data.winner === "white") {
+                    winner = human;
+                    loser = opponentName;
+                } else if (data.winner === "black") {
+                    winner = opponentName;
+                    loser = human;
+                }
+                if (winner) {
+                    socket.emit("gameEnd", { winner, loser, game: "chess" });
+                }
+            }
         });
 
         window.socket.on("gameReset", () => {
