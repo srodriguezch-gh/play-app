@@ -2,7 +2,6 @@
 
 import asyncio
 import logging
-import re
 import uuid
 from typing import Optional
 
@@ -131,6 +130,11 @@ def register_events(sio: socketio.AsyncServer):
         challenger = data.get("challenger")
         opponent = data.get("opponent")
         game = data.get("game")
+
+        caller = game_manager.online_users.get(sid)
+        if caller != opponent:
+            logger.warning(f"acceptChallenge rejected: {caller} attempted to accept challenge for {opponent}")
+            return
         room_id = f"{game}_{challenger}_{opponent}_{uuid.uuid4().hex[:12]}"
         for socket_id, name in game_manager.online_users.items():
             if name == challenger:
