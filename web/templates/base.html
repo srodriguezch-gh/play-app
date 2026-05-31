@@ -15,6 +15,10 @@
     <link href="/static/silrod/css/silrod.css" rel="stylesheet" />
     <link href="/static/silrod/css/silrod-components.css" rel="stylesheet" />
     <link href="/static/theme.css" rel="stylesheet" />
+    <script>
+        // Set authenticated player from server session before socket connects
+        window.__PLAYER__ = {{ current_player | tojson }};
+    </script>
     <script src="/static/game-client.js"></script>
 
     {% block head %}{% endblock %}

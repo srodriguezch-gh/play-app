@@ -36,3 +36,22 @@ button, a, [role="button"] { min-height: 44px; min-width: 44px; }
 ::-webkit-scrollbar-track { background: var(--bg-muted); }
 ::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+
+/* Nav link styles */
+a.nav-link {
+  color: var(--text-secondary);
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  transition: color 0.15s, background-color 0.15s;
+  text-decoration: none;
+  font-weight: 500;
+}
+a.nav-link:hover {
+  color: var(--accent);
+  background-color: var(--accent-light);
+}
+a.nav-link.nav-link-active {
+  color: var(--accent);
+  background-color: var(--accent-light);
+  font-weight: 600;
+}

@@ -13,6 +13,9 @@ from fastapi.templating import Jinja2Templates
 
 from core.config import get_settings
 from core.logging_config import setup_logging
+from silrod_core.logging import setup_logging as _setup_logging
+from silrod_core.middleware.access_log import AccessLogMiddleware
+from silrod_core.middleware.tracking import TrackingMiddleware
 from web.routes import games, players, tasks, auth
 from web.middleware.auth import AuthMiddleware
 from core.game_manager import game_manager
@@ -21,6 +24,7 @@ from services.platform_scraper import PlatformScraper
 
 settings = get_settings()
 setup_logging()
+_setup_logging(name="play-app")
 logger = logging.getLogger(__name__)
 
 scraper = PlatformScraper()
@@ -60,6 +64,18 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
 )
 app.add_middleware(AuthMiddleware)
+app.add_middleware(
+    TrackingMiddleware,
+    app_id="play-app",
+    analytics_url=settings.ANALYTICS_URL or None,
+    enabled=settings.ANALYTICS_ENABLED,
+)
+app.add_middleware(
+    AccessLogMiddleware,
+    app_name="play-app",
+    log_level="INFO",
+    exclude_paths=["/health", "/ready", "/docs", "/openapi.json", "/redoc"],
+)
 
 templates = Jinja2Templates(directory="web/templates")
 

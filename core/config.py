@@ -27,6 +27,9 @@ class Settings(BaseSettings):
 
     CORS_ORIGINS: str = "https://play.silrod.org,http://localhost:3001"
 
+    ANALYTICS_URL: str = ""
+    ANALYTICS_ENABLED: bool = False
+
     def build_database_url(self) -> str:
         if self.DATABASE_URL:
             return self.DATABASE_URL

@@ -1,5 +1,6 @@
 """Game routes for all playable games."""
 
+import json
 import logging
 from typing import Optional
 
@@ -14,6 +15,8 @@ from core.simon_game import SimonSaysGame
 from core.snake_game import SnakeGame
 from core.tictactoe_game import TicTacToeGame
 from core.wordsearch_game import WordSearchGame
+from core.db import async_session, Player, Wallet
+from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +66,32 @@ class SimonPlayRequest(BaseModel):
 
 class SimonNextRoundRequest(BaseModel):
     session_id: str
+
+
+async def _credit_game_win(winner: str, loser: str, game: str) -> None:
+    """Credit winner's wallet (+10) and update stats. Idempotent via unique game state."""
+    if not winner or winner.lower() == "draw":
+        return
+    async with async_session() as session:
+        result = await session.execute(select(Player).where(Player.name == winner))
+        winner_player = result.scalars().one_or_none()
+        if winner_player:
+            game_wins = dict(winner_player.game_wins) if isinstance(winner_player.game_wins, dict) else {}
+            game_wins[game] = game_wins.get(game, 0) + 1
+            winner_player.wins += 1
+            winner_player.game_wins = game_wins
+        wallet_result = await session.execute(select(Wallet).where(Wallet.player_name == winner))
+        winner_wallet = wallet_result.scalars().one_or_none()
+        if winner_wallet is None:
+            winner_wallet = Wallet(player_name=winner, balance=0)
+            session.add(winner_wallet)
+        winner_wallet.balance = (winner_wallet.balance or 0) + 10
+        if loser:
+            result = await session.execute(select(Player).where(Player.name == loser))
+            loser_player = result.scalars().one_or_none()
+            if loser_player:
+                loser_player.losses += 1
+        await session.commit()
 
 
 # ---------------------------------------------------------------------------

@@ -65,7 +65,9 @@
     socket.on('connect', () => {
       const indicator = document.getElementById('online-indicator');
       if (indicator) indicator.innerHTML = '<i class="fas fa-circle text-green-500"></i> Online';
-      socket.emit('login', PlayerManager.get());
+      // Use server-authenticated player if available, fall back to localStorage
+      const player = window.__PLAYER__ || PlayerManager.get();
+      socket.emit('login', player);
     });
 
     socket.on('disconnect', () => {
