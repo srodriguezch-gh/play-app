@@ -1,11 +1,13 @@
 """Game routes for all playable games."""
 
-import json
+import asyncio
 import logging
+import random
+import time
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from core.chess_game import ChessGame
 from core.connectfour_game import ConnectFourGame
@@ -15,8 +17,6 @@ from core.simon_game import SimonSaysGame
 from core.snake_game import SnakeGame
 from core.tictactoe_game import TicTacToeGame
 from core.wordsearch_game import WordSearchGame
-from core.db import async_session, Player, Wallet
-from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,15 @@ class TicTacToeMoveRequest(BaseModel):
 
 
 class RPSMoveRequest(BaseModel):
-    move: str  # rock, paper, or scissors
+    move: str
+
+    @field_validator("move")
+    @classmethod
+    def validate_move(cls, v: str) -> str:
+        v = v.lower()
+        if v not in {"rock", "paper", "scissors"}:
+            raise ValueError("move must be rock, paper, or scissors")
+        return v
 
 
 class ConnectFourMoveRequest(BaseModel):
@@ -68,39 +76,52 @@ class SimonNextRoundRequest(BaseModel):
     session_id: str
 
 
-async def _credit_game_win(winner: str, loser: str, game: str) -> None:
-    """Credit winner's wallet (+10) and update stats. Idempotent via unique game state."""
-    if not winner or winner.lower() == "draw":
-        return
-    async with async_session() as session:
-        result = await session.execute(select(Player).where(Player.name == winner))
-        winner_player = result.scalars().one_or_none()
-        if winner_player:
-            game_wins = dict(winner_player.game_wins) if isinstance(winner_player.game_wins, dict) else {}
-            game_wins[game] = game_wins.get(game, 0) + 1
-            winner_player.wins += 1
-            winner_player.game_wins = game_wins
-        wallet_result = await session.execute(select(Wallet).where(Wallet.player_name == winner))
-        winner_wallet = wallet_result.scalars().one_or_none()
-        if winner_wallet is None:
-            winner_wallet = Wallet(player_name=winner, balance=0)
-            session.add(winner_wallet)
-        winner_wallet.balance = (winner_wallet.balance or 0) + 10
-        if loser:
-            result = await session.execute(select(Player).where(Player.name == loser))
-            loser_player = result.scalars().one_or_none()
-            if loser_player:
-                loser_player.losses += 1
-        await session.commit()
+# ---------------------------------------------------------------------------
+# TTL-cached game state — prevents unbounded memory growth
+# ---------------------------------------------------------------------------
 
+_cache: dict[str, tuple[float, object]] = {}
+
+
+def _cache_set(key: str, value: object, ttl: int = 3600) -> None:
+    _cache[key] = (time.monotonic() + ttl, value)
+
+
+def _cache_get(key: str) -> object | None:
+    entry = _cache.get(key)
+    if entry is None:
+        return None
+    expires_at, value = entry
+    if time.monotonic() > expires_at:
+        _cache.pop(key, None)
+        return None
+    return value
+
+
+def _cache_cleanup() -> None:
+    now = time.monotonic()
+    expired = [k for k, (exp, _) in _cache.items() if now > exp]
+    for k in expired:
+        _cache.pop(k, None)
+
+
+async def _periodic_cache_cleanup() -> None:
+    while True:
+        await asyncio.sleep(300)
+        _cache_cleanup()
+
+
+asyncio.create_task(_periodic_cache_cleanup())
 
 # ---------------------------------------------------------------------------
 # Chess
 # ---------------------------------------------------------------------------
 
+
 @router.post("/chess/move")
 async def chess_move(data: ChessMoveRequest):
     from core.game_manager import game_manager as _gm
+
     game = _gm.get_or_create_chess(data.room_id)
     success = game.chess.move(data.move)
     if not success:
@@ -116,6 +137,7 @@ async def chess_move(data: ChessMoveRequest):
 @router.post("/chess/reset")
 async def chess_reset(room_id: str = Query(...)):
     from core.game_manager import game_manager as _gm
+
     _gm.reset_chess(room_id)
     return {"status": "reset"}
 
@@ -124,10 +146,11 @@ async def chess_reset(room_id: str = Query(...)):
 # Tic-Tac-Toe
 # ---------------------------------------------------------------------------
 
+
 @router.post("/tictactoe/move")
 async def tictactoe_move(data: TicTacToeMoveRequest):
     from core.game_manager import game_manager as _gm
-    from core.tictactoe_game import TicTacToeGame
+
     game = _gm.get_or_create_tictactoe(data.room_id)
     success = game.tictactoe.move(data.cell, data.player)
     if not success:
@@ -143,24 +166,25 @@ async def tictactoe_move(data: TicTacToeMoveRequest):
 # Rock Paper Scissors
 # ---------------------------------------------------------------------------
 
+
 @router.post("/rps/play")
-async def rps_play(move: str, opponent_move: Optional[str] = None):
-    """Play Rock Paper Scissors against a bot if no opponent provided."""
+async def rps_play(data: RPSMoveRequest):
+    choices = ["rock", "paper", "scissors"]
+    opponent_move = random.choice(choices)
     game = RPSGame()
-    if opponent_move is None:
-        opponent_move = "rock"  # default for demo
-    winner = game.play(move, opponent_move)
-    return {"winner": winner, "your_move": move, "bot_move": opponent_move}
+    winner = game.play(data.move, opponent_move)
+    return {"winner": winner, "your_move": data.move, "bot_move": opponent_move}
 
 
 # ---------------------------------------------------------------------------
 # Connect Four
 # ---------------------------------------------------------------------------
 
+
 @router.post("/connectfour/move")
 async def connectfour_move(data: ConnectFourMoveRequest):
     from core.game_manager import game_manager as _gm
-    from core.connectfour_game import ConnectFourGame
+
     game = _gm.get_or_create_connectfour(data.room_id)
     success = game.connectfour.move(data.col, data.player)
     if not success:
@@ -176,7 +200,6 @@ async def connectfour_move(data: ConnectFourMoveRequest):
 # Snake
 # ---------------------------------------------------------------------------
 
-_snake_games = {}
 
 @router.post("/snake/score")
 async def snake_score(data: SnakeScoreRequest):
@@ -189,28 +212,26 @@ async def snake_score(data: SnakeScoreRequest):
 # Hangman
 # ---------------------------------------------------------------------------
 
-_hangman_games = {}
 
 @router.post("/hangman/start")
 async def hangman_start(session_id: str = Query(...)):
-    _hangman_games[session_id] = HangmanGame()
-    return {"visible": _hangman_games[session_id].visible, "lives": _hangman_games[session_id].lives}
+    _cache_set(f"hangman:{session_id}", HangmanGame(), ttl=1800)
+    game = _cache_get(f"hangman:{session_id}")
+    return {"visible": game.visible, "lives": game.lives}
 
 
 @router.post("/hangman/guess")
 async def hangman_guess(data: HangmanGuessRequest):
-    game = _hangman_games.get(data.session_id)
+    game = _cache_get(f"hangman:{data.session_id}")
     if not game:
-        game = _hangman_games[data.session_id] = HangmanGame()
-    elif not hasattr(game, 'word'):
-        _hangman_games[data.session_id] = HangmanGame()
-        game = _hangman_games[data.session_id]
+        game = HangmanGame()
+        _cache_set(f"hangman:{data.session_id}", game, ttl=1800)
     game.guess(data.letter)
     return {
-        "visible": getattr(game, 'visible', ""),
-        "lives": getattr(game, 'lives', 0),
-        "game_over": getattr(game, 'is_game_over', True),
-        "won": getattr(game, 'has_won', False),
+        "visible": getattr(game, "visible", ""),
+        "lives": getattr(game, "lives", 0),
+        "game_over": getattr(game, "is_game_over", True),
+        "won": getattr(game, "has_won", False),
     }
 
 
@@ -218,17 +239,17 @@ async def hangman_guess(data: HangmanGuessRequest):
 # Word Search
 # ---------------------------------------------------------------------------
 
-_wordsearch_games = {}
 
 @router.post("/wordsearch/start")
 async def wordsearch_start(session_id: str = Query(...)):
-    _wordsearch_games[session_id] = WordSearchGame()
-    return {"grid": _wordsearch_games[session_id].get_grid()}
+    game = WordSearchGame()
+    _cache_set(f"wordsearch:{session_id}", game, ttl=1800)
+    return {"grid": game.get_grid()}
 
 
 @router.post("/wordsearch/find")
 async def wordsearch_find(data: WordSearchFindRequest):
-    game = _wordsearch_games.get(data.session_id)
+    game = _cache_get(f"wordsearch:{data.session_id}")
     if not game:
         raise HTTPException(status_code=404, detail="Session not found — start a game first")
     result = game.submit_word(data.word)
@@ -241,30 +262,34 @@ async def wordsearch_find(data: WordSearchFindRequest):
 # Simon Says
 # ---------------------------------------------------------------------------
 
-_simon_games = {}
 
 @router.post("/simon/start")
 async def simon_start(session_id: str = Query(...)):
-    game = _simon_games[session_id] = SimonSaysGame()
+    game = SimonSaysGame()
     game.reset()
+    _cache_set(f"simon:{session_id}", game, ttl=1800)
     return {"sequence": []}
 
 
 @router.post("/simon/round")
 async def simon_round(data: SimonNextRoundRequest):
-    game = _simon_games.get(data.session_id)
+    game = _cache_get(f"simon:{data.session_id}")
     if not game:
         raise HTTPException(status_code=404, detail="Session not found — start a game first")
-    # Actually, data doesn't have session_id — fix using Query
-    return {"sequence": getattr(game, 'sequence', [])}
+    return {"sequence": getattr(game, "sequence", [])}
 
 
 @router.post("/simon/play")
 async def simon_play(data: SimonPlayRequest):
-    game = _simon_games.get(data.session_id)
+    game = _cache_get(f"simon:{data.session_id}")
     if not game:
         raise HTTPException(status_code=404, detail="Session not found")
     success = game.play(data.color)
     if not success:
         return {"success": False, "score": game.score, "game_over": True}
-    return {"success": True, "score": game.score, "round_complete": game.is_round_complete, "game_over": game.is_game_over}
+    return {
+        "success": True,
+        "score": game.score,
+        "round_complete": game.is_round_complete,
+        "game_over": game.is_game_over,
+    }

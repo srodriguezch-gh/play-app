@@ -6,8 +6,8 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from core.auth import authenticate_player, generate_session_token, validate_pin
-from core.db import Player, async_session
-from sqlalchemy import select
+from core.db import Player, Session, async_session
+from sqlalchemy import select, delete
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -22,6 +22,55 @@ def _build_redirect(url: str, error: str = None) -> RedirectResponse:
         import urllib.parse
         return RedirectResponse(url=f"{url}?error={urllib.parse.quote(error)}", status_code=303)
     return RedirectResponse(url=url, status_code=303)
+
+
+def _get_player_from_token(token: str) -> str | None:
+    """Look up player name by session token. Returns None if token invalid."""
+    # Note: called from sync context (middleware, socket environ parsing)
+    # so we run in a blocking sync pool
+    import asyncio
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+    if loop.is_running():
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor() as pool:
+            future = pool.submit(_get_player_from_token_sync, token)
+            return future.result(timeout=5)
+    return asyncio.run(_get_player_from_token_async(token))
+
+
+def _get_player_from_token_async(token: str) -> str | None:
+    async def _lookup():
+        async with async_session() as session:
+            result = await session.execute(select(Session).where(Session.token == token))
+            sess = result.scalars().one_or_none()
+            return sess.player_name if sess else None
+    try:
+        return asyncio.run(_lookup())
+    except Exception:
+        return None
+
+
+def _get_player_from_token_sync(token: str) -> str | None:
+    """Sync wrapper for use in sync contexts."""
+    return _get_player_from_token_async(token)
+
+
+async def _create_session(player_name: str) -> str:
+    """Create a new session token for the player. Returns the token."""
+    token = generate_session_token()
+    async with async_session() as session:
+        session.add(Session(token=token, player_name=player_name))
+        await session.commit()
+    return token
+
+
+async def _delete_session(token: str) -> None:
+    async with async_session() as session:
+        await session.execute(delete(Session).where(Session.token == token))
+        await session.commit()
 
 
 @router.get("/login")
@@ -50,17 +99,11 @@ async def login(request: Request, response: Response, name: str = Form(...), pin
         logger.warning(f"Failed login for {name} from {client_ip}: {auth_msg}")
         return _build_redirect("/login", auth_msg)
 
-    async with async_session() as session:
-        result = await session.execute(select(Player).where(Player.name == name))
-        player = result.scalars().one_or_none()
-        if not player:
-            return _build_redirect("/login", "Player not found")
-
-    token = generate_session_token()
+    token = await _create_session(name)
     response = RedirectResponse(url="/", status_code=303)
     response.set_cookie(
         key=PLAYER_COOKIE,
-        value=name,
+        value=token,
         httponly=True,
         samesite="lax",
         max_age=SESSION_TTL,
@@ -72,16 +115,19 @@ async def login(request: Request, response: Response, name: str = Form(...), pin
 
 @router.post("/logout")
 async def logout(request: Request, response: Response):
-    player = request.cookies.get(PLAYER_COOKIE, "unknown")
+    token = request.cookies.get(PLAYER_COOKIE)
+    if token:
+        await _delete_session(token)
     response = RedirectResponse(url="/login", status_code=303)
     response.delete_cookie(PLAYER_COOKIE)
-    logger.info(f"Logout for {player}")
+    logger.info(f"Logout for token={token[:8]}...")
     return response
 
 
 @router.get("/api/session")
 async def get_session(request: Request):
-    player = request.cookies.get(PLAYER_COOKIE)
-    if not player:
+    token = request.cookies.get(PLAYER_COOKIE)
+    if not token:
         return {"player": None}
-    return {"player": player}
+    player_name = await _get_player_from_token_async(token)
+    return {"player": player_name}

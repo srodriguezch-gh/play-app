@@ -41,6 +41,16 @@ class Wallet(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class Session(Base):
+    """Secure session tokens for HTTP and socket auth."""
+
+    __tablename__ = "sessions"
+
+    token = Column(String(64), primary_key=True)
+    player_name = Column(String(100), nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class Task(Base):
     """Child task/reward entry."""
 
@@ -66,11 +76,11 @@ class Transaction(Base):
     __tablename__ = "transactions"
 
     id = Column(Integer, primary_key=True)
-    child_name = Column(String(100), nullable=False)
+    child_name = Column(String(100), nullable=False, index=True)
     amount = Column(Numeric, nullable=False)
     description = Column(Text, nullable=True)
     kind = Column(String(20), default="earn")
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
 
 class PlayerCollection(Base):
@@ -79,7 +89,7 @@ class PlayerCollection(Base):
     __tablename__ = "player_collections"
 
     id = Column(Integer, primary_key=True)
-    player_name = Column(String(100), nullable=False)
+    player_name = Column(String(100), nullable=False, index=True)
     game_id = Column(String(100), nullable=False)
     collection_data = Column(JSON, nullable=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
