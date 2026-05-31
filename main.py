@@ -1,4 +1,4 @@
-"""Game Hub — FastAPI + Socket.io server."""
+"""Play — FastAPI + Socket.io server."""
 
 import logging
 import os
@@ -13,7 +13,8 @@ from fastapi.templating import Jinja2Templates
 
 from core.config import get_settings
 from core.logging_config import setup_logging
-from web.routes import games, players, tasks
+from web.routes import games, players, tasks, auth
+from web.middleware.auth import AuthMiddleware
 from core.game_manager import game_manager
 from web import socket_events
 from services.platform_scraper import PlatformScraper
@@ -24,15 +25,15 @@ logger = logging.getLogger(__name__)
 
 scraper = PlatformScraper()
 
+
 async def achievement_scraper_task():
     while True:
         try:
             logger.info("Running achievement scraper")
-            # For now just log
             await scraper.fetch_achievements("steam", "demo_game")
         except Exception as e:
             logger.error(f"Error in achievement scraper: {e}")
-        await asyncio.sleep(60 * 60) # Every hour
+        await asyncio.sleep(60 * 60)
 
 
 @asynccontextmanager
@@ -58,10 +59,17 @@ app.add_middleware(
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
 )
+app.add_middleware(AuthMiddleware)
 
 templates = Jinja2Templates(directory="web/templates")
 
-# Routes
+try:
+    from silrod_ui import configure_template_loader
+    configure_template_loader(templates, "web/templates")
+except ImportError:
+    pass
+
+app.include_router(auth.router)
 app.include_router(players.router)
 app.include_router(tasks.router)
 app.include_router(games.router)
@@ -79,27 +87,42 @@ async def ready():
 
 @app.get("/")
 async def index(request: Request):
-    return templates.TemplateResponse("dashboard.html", {"request": request})
+    return templates.TemplateResponse("dashboard.html", {
+        "request": request,
+        "current_player": request.state.current_player,
+    })
 
 
 @app.get("/leaderboard")
 async def leaderboard(request: Request):
-    return templates.TemplateResponse("leaderboard.html", {"request": request})
+    return templates.TemplateResponse("leaderboard.html", {
+        "request": request,
+        "current_player": request.state.current_player,
+    })
 
 
 @app.get("/tasks")
 async def tasks_page(request: Request):
-    return templates.TemplateResponse("task_hub.html", {"request": request})
+    return templates.TemplateResponse("task_hub.html", {
+        "request": request,
+        "current_player": request.state.current_player,
+    })
 
 
 @app.get("/games/chess")
 async def chess_page(request: Request):
-    return templates.TemplateResponse("game/chess.html", {"request": request})
+    return templates.TemplateResponse("game/chess.html", {
+        "request": request,
+        "current_player": request.state.current_player,
+    })
 
 
 @app.get("/games/tictactoe")
 async def tictactoe_page(request: Request):
-    return templates.TemplateResponse("game/tictactoe.html", {"request": request})
+    return templates.TemplateResponse("game/tictactoe.html", {
+        "request": request,
+        "current_player": request.state.current_player,
+    })
 
 
 @app.get("/games/{game}")
@@ -108,10 +131,12 @@ async def game_page(request: Request, game: str):
     template_dir = os.path.join(os.path.dirname(__file__), "web/templates/game")
     if not os.path.exists(os.path.join(os.path.dirname(__file__), "web/templates", template_path)):
         return templates.TemplateResponse("errors/404.html", {"request": request}, status_code=404)
-    return templates.TemplateResponse(template_path, {"request": request})
+    return templates.TemplateResponse(template_path, {
+        "request": request,
+        "current_player": request.state.current_player,
+    })
 
 
-# Error handlers
 @app.exception_handler(404)
 async def not_found(request: Request, exc):
     return templates.TemplateResponse("errors/404.html", {"request": request}, status_code=404)
@@ -123,10 +148,8 @@ async def server_error(request: Request, exc):
     return templates.TemplateResponse("errors/500.html", {"request": request}, status_code=500)
 
 
-# Static files
 app.mount("/static", StaticFiles(directory="web/static"), name="static")
 
-# Mount silrod-ui shared CSS
 try:
     from silrod_ui import get_static_dir
     silrod_static = get_static_dir()
@@ -135,7 +158,6 @@ try:
 except ImportError:
     pass
 
-# Socket.io server
 sio = socketio.AsyncServer(
     async_mode="asgi",
     cors_allowed_origins=settings.cors_origins_list,

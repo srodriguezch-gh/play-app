@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Game Hub{% endblock %}
+{% block title %}Play{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
@@ -11,7 +11,7 @@
         </h2>
         <div class="flex gap-3 flex-wrap" id="child-tabs">
             {% for child in ["Emma", "Mateo", "Dad"] %}
-            <button onclick="switchChild('{{ child }}')" class="child-tab px-4 py-2 rounded-lg border border-slate-200 hover:border-blue-400 text-sm font-medium" data-child="{{ child }}">
+            <button onclick="switchChild('{{ child }}')" class="child-tab px-4 py-2 rounded-lg border border-slate-200 hover:border-blue-400 text-sm font-medium{{ ' border-blue-400 bg-blue-50' if child == current_player else '' }}" data-child="{{ child }}">
                 {{ child }}
             </button>
             {% endfor %}
@@ -70,7 +70,7 @@
 
 {% block scripts %}
 <script>
-    let currentChild = "Emma";
+    let currentChild = {{ current_player | tojson }};
 
     function switchChild(child) {
         currentChild = child;

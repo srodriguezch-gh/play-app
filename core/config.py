@@ -13,7 +13,7 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
     )
 
-    APP_NAME: str = "game-hub"
+    APP_NAME: str = "Play"
     APP_VERSION: str = "0.1.0"
     PORT: int = 3001
 

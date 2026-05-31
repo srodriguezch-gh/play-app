@@ -1,24 +1,23 @@
 {% extends "base.html" %}
 
-{% block title %}Game Hub{% endblock %}
+{% block title %}Play{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
-    <!-- Player Selection -->
+    <!-- Player Greeting + Logout -->
     <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-        <h2 class="text-lg font-semibold text-slate-800 mb-4">
-            <i class="fas fa-user-circle mr-2"></i>Select Player
-        </h2>
-        <div class="flex gap-3 flex-wrap" id="player-select">
-            {% for name in ["Dad", "Emma", "Mateo", "Calypso"] %}
-            <button
-                onclick="selectPlayer('{{ name }}')"
-                class="px-4 py-2 rounded-lg border border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-colors text-sm font-medium"
-                id="player-btn-{{ name }}"
-            >
-                {{ name }}
-            </button>
-            {% endfor %}
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-lg font-semibold text-slate-800">
+                    <i class="fas fa-user-circle mr-2"></i>Hey, {{ current_player }}!
+                </h2>
+                <p class="text-sm text-slate-500 mt-1">Ready to play?</p>
+            </div>
+            <form method="post" action="/logout">
+                <button type="submit" class="px-4 py-2 text-sm bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition-colors">
+                    <i class="fas fa-sign-out-alt mr-1"></i>Sign Out
+                </button>
+            </form>
         </div>
     </div>
 
@@ -38,6 +37,17 @@
         </div>
     </div>
 
+    <!-- Wallet -->
+    <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="text-sm text-slate-500 mb-1">Your Balance</div>
+                <div class="text-3xl font-bold text-emerald-600" id="wallet-balance">—</div>
+            </div>
+            <i class="fas fa-wallet text-3xl text-emerald-400"></i>
+        </div>
+    </div>
+
     <!-- Game Selection -->
     <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
         <h2 class="text-lg font-semibold text-slate-800 mb-4">
@@ -47,17 +57,27 @@
             <a href="/games/chess" class="block p-4 rounded-lg border border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-colors text-center">
                 <div class="text-3xl mb-2">♟️</div>
                 <div class="font-medium text-slate-800">Chess</div>
-                <div class="text-xs text-slate-500 mt-1">vs player or AI</div>
+                <div class="text-xs text-slate-500 mt-1">vs Calypso AI</div>
             </a>
             <a href="/games/tictactoe" class="block p-4 rounded-lg border border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-colors text-center">
                 <div class="text-3xl mb-2">⭕</div>
                 <div class="font-medium text-slate-800">Tic-Tac-Toe</div>
                 <div class="text-xs text-slate-500 mt-1">2 player local</div>
             </a>
+            <a href="/games/connectfour" class="block p-4 rounded-lg border border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-colors text-center">
+                <div class="text-3xl mb-2">🎨</div>
+                <div class="font-medium text-slate-800">Connect 4</div>
+                <div class="text-xs text-slate-500 mt-1">vs AI</div>
+            </a>
+            <a href="/games/rockpaperscissors" class="block p-4 rounded-lg border border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-colors text-center">
+                <div class="text-3xl mb-2">✋</div>
+                <div class="font-medium text-slate-800">Rock Paper Scissors</div>
+                <div class="text-xs text-slate-500 mt-1">vs bot</div>
+            </a>
             <a href="/games/snake" class="block p-4 rounded-lg border border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-colors text-center">
                 <div class="text-3xl mb-2">🐍</div>
                 <div class="font-medium text-slate-800">Snake</div>
-                <div class="text-xs text-slate-500 mt-1">single player</div>
+                <div class="text-xs text-slate-500 mt-1">high score</div>
             </a>
             <a href="/games/hangman" class="block p-4 rounded-lg border border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-colors text-center">
                 <div class="text-3xl mb-2">❓</div>
@@ -69,20 +89,10 @@
                 <div class="font-medium text-slate-800">Checkers</div>
                 <div class="text-xs text-slate-500 mt-1">vs AI</div>
             </a>
-            <a href="/games/connectfour" class="block p-4 rounded-lg border border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-colors text-center">
-                <div class="text-3xl mb-2">🎨</div>
-                <div class="font-medium text-slate-800">Connect 4</div>
-                <div class="text-xs text-slate-500 mt-1">vs AI</div>
-            </a>
-            <a href="/games/rockpaperscissors" class="block p-4 rounded-lg border border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-colors text-center">
-                <div class="text-3xl mb-2">✋</div>
-                <div class="font-medium text-slate-800">RPS</div>
-                <div class="text-xs text-slate-500 mt-1">best of 5</div>
-            </a>
             <a href="/games/simonsays" class="block p-4 rounded-lg border border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-colors text-center">
                 <div class="text-3xl mb-2">🎮</div>
                 <div class="font-medium text-slate-800">Simon Says</div>
-                <div class="text-xs text-slate-500 mt-1">memory game</div>
+                <div class="text-xs text-slate-500 mt-1">memory</div>
             </a>
         </div>
     </div>
@@ -107,7 +117,9 @@
             <select id="challenge-opponent" class="px-4 py-2 rounded-lg border border-slate-200 text-sm">
                 <option value="">Select opponent...</option>
                 {% for name in ["Emma", "Mateo", "Dad", "Calypso"] %}
-                <option value="{{ name }}">{{ name }}</option>
+                    {% if name != current_player %}
+                    <option value="{{ name }}">{{ name }}</option>
+                    {% endif %}
                 {% endfor %}
             </select>
             <select id="challenge-game" class="px-4 py-2 rounded-lg border border-slate-200 text-sm">
@@ -125,32 +137,19 @@
 
 {% block scripts %}
 <script>
-    const currentPlayer = localStorage.getItem("gamehub_player") || "Dad";
-
-    function selectPlayer(name) {
-        localStorage.setItem("gamehub_player", name);
-        document.querySelectorAll('[id^="player-btn-"]').forEach(btn => {
-            btn.classList.remove('border-blue-400', 'bg-blue-50');
-        });
-        document.getElementById('player-btn-' + name).classList.add('border-blue-400', 'bg-blue-50');
-        socket.emit("login", name);
-    }
+    const currentPlayer = {{ current_player | tojson }};
 
     function sendChallenge() {
-        const opponent = document.getElementById('challenge-opponent').value;
-        const game = document.getElementById('challenge-game').value;
+        const opponent = document.getElementById("challenge-opponent").value;
+        const game = document.getElementById("challenge-game").value;
         if (!opponent) {
-            document.getElementById('challenge-status').textContent = "Select an opponent first";
+            document.getElementById("challenge-status").textContent = "Select an opponent first";
             return;
         }
         socket.emit("sendChallenge", { challenger: currentPlayer, opponent, game });
-        document.getElementById('challenge-status').textContent = `Challenge sent to ${opponent}!`;
+        document.getElementById("challenge-status").textContent = `Challenge sent to ${opponent}!`;
     }
 
-    // Initialize
-    selectPlayer(currentPlayer);
-
-    // Listen for challenge
     socket.on("receiveChallenge", (data) => {
         if (confirm(`${data.challenger} challenged you to ${data.game}! Accept?`)) {
             socket.emit("acceptChallenge", {
@@ -165,16 +164,17 @@
         window.location.href = `/games/${data.game}?room=${data.roomId}&role=${data.role}&opponent=${data.opponent}`;
     });
 
-    // Load player stats
     socket.on("playersResult", (players) => {
         const p = players[currentPlayer];
         if (p) {
             document.getElementById("stat-wins").textContent = p.wins;
             document.getElementById("stat-losses").textContent = p.losses;
             document.getElementById("stat-games").textContent = p.wins + p.losses;
+            document.getElementById("wallet-balance").textContent = "$" + (p.balance || 0).toFixed(2);
         }
     });
 
+    socket.emit("login", currentPlayer);
     socket.emit("getPlayers");
 </script>
 {% endblock %}

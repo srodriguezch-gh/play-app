@@ -1,26 +1,16 @@
-"""Player management routes."""
+"""Player management routes for Play."""
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.auth import login_player
 from core.db import Player, Wallet, get_session
 
 router = APIRouter(prefix="/api", tags=["players"])
 
 
-class LoginRequest(BaseModel):
-    name: str
-    pin: str
-
-
 class ResetPinRequest(BaseModel):
-    name: str
-
-
-class WalletRequest(BaseModel):
     name: str
 
 
@@ -42,14 +32,6 @@ async def get_players(session: AsyncSession = Depends(get_session)):
             "hasPin": bool(p.pin),
         }
     return players
-
-
-@router.post("/login")
-async def login(data: LoginRequest, session: AsyncSession = Depends(get_session)):
-    success, message = await login_player(session, data.name, data.pin)
-    if success:
-        return {"success": True, "message": message}
-    raise HTTPException(status_code=401 if "Incorrect" in message else 400, detail=message)
 
 
 @router.post("/admin/reset-pin")

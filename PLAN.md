@@ -1,4 +1,4 @@
-# Game Hub Python Rewrite Implementation Plan
+# Play Python Rewrite Implementation Plan
 
 > **For Silvio:** Use subagent-driven-development skill to implement this plan task-by-task.
 

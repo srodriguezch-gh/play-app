@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Game Hub{% endblock %}
+{% block title %}Play{% endblock %}
 
 {% block content %}
 <div class="bg-white rounded-lg shadow-sm border border-slate-200">
@@ -46,10 +46,11 @@
     function renderLeaderboard(players) {
         const sorted = Object.values(players).sort((a, b) => b.wins - a.wins);
         const tbody = document.getElementById("leaderboard-tbody");
+        const self = {{ current_player | tojson }};
         tbody.innerHTML = sorted.map((p, i) => `
-            <tr class="border-b border-slate-50 hover:bg-slate-50">
+            <tr class="border-b border-slate-50 hover:bg-slate-50${p.name === self ? ' bg-blue-50' : ''}">
                 <td class="py-3 ${i === 0 ? 'text-yellow-500 font-bold' : 'text-slate-400'}">${i + 1}</td>
-                <td class="py-3 font-medium text-slate-800">${p.name}</td>
+                <td class="py-3 font-medium text-slate-800">${p.name}${p.name === self ? ' (you)' : ''}</td>
                 <td class="py-3 text-center text-green-600 font-medium">${p.wins}</td>
                 <td class="py-3 text-center text-red-500">${p.losses}</td>
                 <td class="py-3 text-center text-emerald-600 font-medium">$${(p.balance || 0).toFixed(2)}</td>
