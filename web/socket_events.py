@@ -94,7 +94,7 @@ def register_events(sio: socketio.AsyncServer):
 
     @sio.event
     async def makeMove(sid, data: dict):
-        """Broadcast the move and trigger server-side chess AI when needed."""
+        """Apply the move server-side, broadcast the new state, and trigger AI when needed."""
         room_id = data.get("roomId")
         move = data.get("move")
         move_type = data.get("type")
@@ -103,20 +103,61 @@ def register_events(sio: socketio.AsyncServer):
         if move_type == "reset":
             if game_type == "chess":
                 game_manager.reset_chess(room_id)
+            elif game_type == "tictactoe":
+                game = game_manager.get_or_create_tictactoe(room_id)
+                game.tictactoe.reset()
+            elif game_type == "connectfour":
+                game = game_manager.get_or_create_connectfour(room_id)
+                game.connectfour.reset()
             await sio.emit("gameReset", room=room_id)
             return
 
-        # Route move to room — game logic is client-side
-        await sio.emit("moveMade", {
-            "move": move,
-            "game": game_type,
-            "fen": data.get("fen"),
-            "nextState": data.get("nextState"),
-        }, room=room_id)
+        # Server-side move validation and state update
+        response = {"move": move, "game": game_type}
+        if game_type == "chess":
+            chess_move = data.get("move")
+            if chess_move:
+                game = game_manager.get_or_create_chess(room_id)
+                success = game.chess.move(chess_move)
+                if success:
+                    response["fen"] = game.chess.to_fen()
+                    response["legal"] = game.chess.get_legal_moves()
+                    response["game_over"] = game.chess.is_game_over()
+                    response["winner"] = game.chess.get_winner()
+                else:
+                    response["error"] = "Illegal move"
+        elif game_type == "tictactoe":
+            cell = move
+            if cell is not None:
+                game = game_manager.get_or_create_tictactoe(room_id)
+                success = game.tictactoe.move(int(cell), data.get("symbol"))
+                if success:
+                    response["board"] = game.tictactoe.get_board()
+                    response["game_over"] = game.tictactoe.is_game_over()
+                    response["winner"] = game.tictactoe.get_winner()
+                else:
+                    response["error"] = "Illegal move"
+        elif game_type == "connectfour":
+            col = move
+            if col is not None:
+                game = game_manager.get_or_create_connectfour(room_id)
+                success = game.connectfour.move(int(col), data.get("symbol"))
+                if success:
+                    response["board"] = game.connectfour.get_board()
+                    response["game_over"] = game.connectfour.is_game_over()
+                    response["winner"] = game.connectfour.get_winner()
+                else:
+                    response["error"] = "Illegal move"
+        else:
+            # Fallback broadcast for unsupported games
+            pass
+
+        # Broadcast the validated state
+        await sio.emit("moveMade", {**data, **response}, room=room_id)
 
         # Chess AI response via bot_service.
         if game_type == "chess" and ("solo" in room_id or "Calypso" in room_id or "Traka" in room_id):
-            fen = data.get("fen")
+            fen = response.get("fen")
             if fen:
                 bot_name = "Calypso" if "Calypso" in room_id else "Traka"
                 await bot_service.request_chess_move(bot_name, fen, lambda result: _handle_ai_response(room_id, result))

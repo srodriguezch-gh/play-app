@@ -1,4 +1,4 @@
-"""Game routes for chess, tic-tac-toe, RPS, and Connect Four."""
+"""Game routes for all playable games."""
 
 import logging
 from typing import Optional
@@ -8,8 +8,12 @@ from pydantic import BaseModel
 
 from core.chess_game import ChessGame
 from core.connectfour_game import ConnectFourGame
+from core.hangman_game import HangmanGame
 from core.rps_game import RPSGame
+from core.simon_game import SimonSaysGame
+from core.snake_game import SnakeGame
 from core.tictactoe_game import TicTacToeGame
+from core.wordsearch_game import WordSearchGame
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +38,30 @@ class RPSMoveRequest(BaseModel):
 class ConnectFourMoveRequest(BaseModel):
     col: int
     player: str
+
+
+class SnakeScoreRequest(BaseModel):
+    player: str
+    score: int
+
+
+class HangmanGuessRequest(BaseModel):
+    session_id: str
+    letter: str
+
+
+class WordSearchFindRequest(BaseModel):
+    session_id: str
+    word: str
+
+
+class SimonPlayRequest(BaseModel):
+    session_id: str
+    color: str
+
+
+class SimonNextRoundRequest(BaseModel):
+    session_id: str
 
 
 # ---------------------------------------------------------------------------
@@ -112,3 +140,101 @@ async def connectfour_move(data: ConnectFourMoveRequest):
         "game_over": game.connectfour.is_game_over(),
         "winner": game.connectfour.get_winner(),
     }
+
+
+# ---------------------------------------------------------------------------
+# Snake
+# ---------------------------------------------------------------------------
+
+_snake_games = {}
+
+@router.post("/snake/score")
+async def snake_score(data: SnakeScoreRequest):
+    game = SnakeGame()
+    game.submit_score(data.score)
+    return {"high_score": game.score}
+
+
+# ---------------------------------------------------------------------------
+# Hangman
+# ---------------------------------------------------------------------------
+
+_hangman_games = {}
+
+@router.post("/hangman/start")
+async def hangman_start(session_id: str = Query(...)):
+    _hangman_games[session_id] = HangmanGame()
+    return {"visible": _hangman_games[session_id].visible, "lives": _hangman_games[session_id].lives}
+
+
+@router.post("/hangman/guess")
+async def hangman_guess(data: HangmanGuessRequest):
+    game = _hangman_games.get(data.session_id)
+    if not game:
+        game = _hangman_games[data.session_id] = HangmanGame()
+    elif not hasattr(game, 'word'):
+        _hangman_games[data.session_id] = HangmanGame()
+        game = _hangman_games[data.session_id]
+    game.guess(data.letter)
+    return {
+        "visible": getattr(game, 'visible', ""),
+        "lives": getattr(game, 'lives', 0),
+        "game_over": getattr(game, 'is_game_over', True),
+        "won": getattr(game, 'has_won', False),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Word Search
+# ---------------------------------------------------------------------------
+
+_wordsearch_games = {}
+
+@router.post("/wordsearch/start")
+async def wordsearch_start(session_id: str = Query(...)):
+    _wordsearch_games[session_id] = WordSearchGame()
+    return {"grid": _wordsearch_games[session_id].get_grid()}
+
+
+@router.post("/wordsearch/find")
+async def wordsearch_find(data: WordSearchFindRequest):
+    game = _wordsearch_games.get(data.session_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Session not found — start a game first")
+    result = game.submit_word(data.word)
+    if result["success"]:
+        return {"found": data.word, "score": result["score"], "game_over": game.is_game_over}
+    return {"message": result["message"], "score": result["score"], "game_over": game.is_game_over}
+
+
+# ---------------------------------------------------------------------------
+# Simon Says
+# ---------------------------------------------------------------------------
+
+_simon_games = {}
+
+@router.post("/simon/start")
+async def simon_start(session_id: str = Query(...)):
+    game = _simon_games[session_id] = SimonSaysGame()
+    game.reset()
+    return {"sequence": []}
+
+
+@router.post("/simon/round")
+async def simon_round(data: SimonNextRoundRequest):
+    game = _simon_games.get(data.session_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Session not found — start a game first")
+    # Actually, data doesn't have session_id — fix using Query
+    return {"sequence": getattr(game, 'sequence', [])}
+
+
+@router.post("/simon/play")
+async def simon_play(data: SimonPlayRequest):
+    game = _simon_games.get(data.session_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Session not found")
+    success = game.play(data.color)
+    if not success:
+        return {"success": False, "score": game.score, "game_over": True}
+    return {"success": True, "score": game.score, "round_complete": game.is_round_complete, "game_over": game.is_game_over}
