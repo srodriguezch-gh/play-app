@@ -16,9 +16,13 @@ class GameInstance:
     last_updated: float = field(default_factory=lambda: datetime.now(timezone.utc).timestamp())
 
 
-@dataclass
+from core.chess_game import ChessGame as _ChessGameLogic
+
 class ChessGameInstance(GameInstance):
-    fen: str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    """Server-side chess session with authoritative board."""
+    def __init__(self, room_id: str):
+        super().__init__(room_id=room_id)
+        self.chess = _ChessGameLogic()
 
 
 class GameManager:
@@ -102,9 +106,9 @@ class GameManager:
         return game
 
     def update_chess_fen(self, room_id: str, fen: str):
-        """Persist the latest FEN for a chess room."""
+        """Load a specific FEN into a chess room."""
         game = self.get_or_create_chess(room_id)
-        game.fen = fen
+        game.chess.from_fen(fen)
 
     def reset_chess(self, room_id: str):
         """Reset a chess room to the starting position."""
