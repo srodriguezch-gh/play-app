@@ -17,7 +17,7 @@
     <link href="/static/theme.css" rel="stylesheet" />
     <script>
         // Set authenticated player from server session before socket connects
-        window.__PLAYER__ = {{ current_player | tojson }};
+        window.__PLAYER__ = {{ current_player | tojson if current_player is not none else 'null' }};
     </script>
     <script src="/static/game-client.js"></script>
 

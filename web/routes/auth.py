@@ -30,7 +30,7 @@ async def login_page(request: Request):
         return RedirectResponse(url="/", status_code=303)
     templates = Jinja2Templates(directory="web/templates")
     error = request.query_params.get("error", "")
-    return templates.TemplateResponse("login.html", {"request": request, "error": error})
+    return templates.TemplateResponse("login.html", {"request": request, "error": error, "current_player": None})
 
 
 @router.post("/login")
