@@ -12,8 +12,8 @@ on:
     branches: [main]
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: srodriguezch-gh/game-hub-python
+  REGISTRY: ghcr.io/srodriguezch-gh
+  IMAGE_NAME: game-hub-python
 
 jobs:
   build:
