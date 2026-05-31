@@ -192,7 +192,7 @@ def register_events(sio: socketio.AsyncServer):
         async with async_session() as session:
             # Update winner stats
             result = await session.execute(select(Player).where(Player.name == winner))
-            winner_player = result.scalar_one_or_none()
+            winner_player = result.scalars().one_or_none()
             if not winner_player:
                 return
             if winner_player:
@@ -202,7 +202,7 @@ def register_events(sio: socketio.AsyncServer):
                 winner_player.game_wins = game_wins
             # Credit winner's wallet
             wallet_result = await session.execute(select(Wallet).where(Wallet.player_name == winner))
-            winner_wallet = wallet_result.scalar_one_or_none()
+            winner_wallet = wallet_result.scalars().one_or_none()
             if winner_wallet is None:
                 from core.db import Wallet as _WalletModel
                 winner_wallet = _WalletModel(player_name=winner, balance=0)
@@ -211,7 +211,7 @@ def register_events(sio: socketio.AsyncServer):
             # Update loser stats
             if loser:
                 result = await session.execute(select(Player).where(Player.name == loser))
-                loser_player = result.scalar_one_or_none()
+                loser_player = result.scalars().one_or_none()
                 if loser_player:
                     loser_player.losses += 1
             await session.commit()

@@ -52,7 +52,7 @@ async def login(request: Request, response: Response, name: str = Form(...), pin
 
     async with async_session() as session:
         result = await session.execute(select(Player).where(Player.name == name))
-        player = result.scalar_one_or_none()
+        player = result.scalars().one_or_none()
         if not player:
             return _build_redirect("/login", "Player not found")
 

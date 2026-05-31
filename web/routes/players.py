@@ -37,7 +37,7 @@ async def get_players(session: AsyncSession = Depends(get_session)):
 @router.post("/admin/reset-pin")
 async def reset_pin(data: ResetPinRequest, session: AsyncSession = Depends(get_session)):
     result = await session.execute(select(Player).where(Player.name == data.name))
-    player = result.scalar_one_or_none()
+    player = result.scalars().one_or_none()
     if not player:
         raise HTTPException(status_code=404, detail="Player not found")
     player.pin = None

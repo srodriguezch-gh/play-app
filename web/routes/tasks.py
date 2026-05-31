@@ -113,7 +113,7 @@ async def approve_task(task_id: int, data: ApproveRequest, session: AsyncSession
         raise HTTPException(status_code=404, detail="Task not found")
 
     result = await session.execute(select(Player).where(Player.name == task.child_name))
-    player = result.scalar_one_or_none()
+    player = result.scalars().one_or_none()
     if not player or not player.pin:
         raise HTTPException(status_code=403, detail="No PIN set for this player")
 

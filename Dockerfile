@@ -6,6 +6,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --break-system-packages --upgrade pip setuptools wheel && \
     pip install --no-cache-dir -r requirements.txt
 
+COPY wheels/silrod_core-*.whl /tmp/
+RUN pip install --no-cache-dir --break-system-packages /tmp/silrod_core-*.whl
+
 COPY . .
 
 FROM silrod-base:latest

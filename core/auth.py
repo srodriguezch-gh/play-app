@@ -78,7 +78,7 @@ async def authenticate_player(name: str, pin: str, ip: str = "unknown") -> tuple
 
     async with async_session() as session:
         result = await session.execute(select(Player).where(Player.name == name))
-        player = result.scalar_one_or_none()
+        player = result.scalars().one_or_none()
 
         if not player:
             _clear_rate_limit(name, ip)
