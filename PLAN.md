@@ -1,13 +1,49 @@
-# Play Python Rewrite Implementation Plan
+# Play — Implementation Plan
 
-> **For Silvio:** Use subagent-driven-development skill to implement this plan task-by-task.
+> **Status:** ✅ IMPLEMENTED — running on NUC at `http://192.168.5.99:3001`
 
-**Goal:** Rewrite game-hub from Node.js/React to Python/FastAPI + HTMX + Socket.io, using silrod-core as the shared foundation. Maintain multiplayer, player persistence, and all existing games while simplifying the stack.
+## What's Built
 
-**Architecture:**
-- FastAPI backend with python-socketio for real-time game communication
-- Jinja2 + HTMX for dashboard/admin pages; vanilla JS + Socket.io for game boards (no React)
-- PostgreSQL via SQLAlchemy for player stats, task hub, transactions
+- PIN authentication (first login sets PIN, subsequent logins verify)
+- bcrypt hashing, rate limiting (5 attempts/5min lockout)
+- Session cookie: HttpOnly, SameSite=lax, 30-day TTL
+- AuthMiddleware protecting all routes except `/login`, `/health`, `/static`
+- Dashboard: player greeting, wallet balance, stats, game grid
+- Leaderboard: sorted by wins, highlights current player
+- Task hub: per-child tasks, PIN-protected approval → wallet credit
+- 9 games: chess, tictactoe, connectfour, rps, snake, hangman, checkers, simonsays, wordsearch
+- Socket.IO for real-time game events and challenge system
+- Leaderboard updates via socket on game end
+
+## Tech Stack
+- FastAPI + Uvicorn + Python 3.12
+- python-socketio for real-time game communication
+- Jinja2 + HTMX for dashboard/pages
+- PostgreSQL via SQLAlchemy async
+- silrod-ui for shared shell/CSS/JS
+- python-chess for server-side chess validation
+
+## Routes
+- `GET /login`, `POST /login`, `POST /logout` — auth
+- `GET /` — dashboard
+- `GET /leaderboard` — rankings
+- `GET /tasks` — task hub
+- `GET /games/{game}` — individual game pages
+- `POST /api/tasks/{id}/approve` — PIN-verified approval → wallet credit
+
+## Key Decisions
+- silrod_core mount at `/app/silrod_core:ro` with PYTHONPATH override
+- Game transactions recorded, not deleted on payout
+- Server-side move validation for chess, tictactoe, connectfour
+- `gameEnd` socket event credits wallet (+10) and updates stats
+- `loser` key fix (was `losers`) so stats persist correctly
+- Local `web/templates/macros/_shell.html` overrides container's stale silrod-ui
+
+## Naming History
+- Originally: `game-hub-python` repo + `bosgame-play-app:latest` image
+- Renamed 2026-05-31: `play-app` repo + `play-app:latest` image
+- App name: `Play` (was `Game Hub`)
+- DB: `gamehub` (unchanged)
 - In-memory game state for active matches, persisted to DB on game end
 - Python-chess for chess logic, chess engine subprocess for AI moves
 - silrod-core for config, logging, base templates, and shared CSS
