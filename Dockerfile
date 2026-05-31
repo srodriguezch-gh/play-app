@@ -1,4 +1,4 @@
-FROM ghcr.io/silrod/silrod-base:latest AS builder
+FROM ghcr.io/srodriguezch-gh/silrod-base:latest AS builder
 
 WORKDIR /app
 
@@ -11,7 +11,7 @@ RUN pip install --no-cache-dir --break-system-packages /tmp/silrod_core-*.whl
 
 COPY . .
 
-FROM ghcr.io/silrod/silrod-base:latest
+FROM ghcr.io/srodriguezch-gh/silrod-base:latest
 
 WORKDIR /app
 
