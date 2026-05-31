@@ -17,12 +17,26 @@ class GameInstance:
 
 
 from core.chess_game import ChessGame as _ChessGameLogic
+from core.connectfour_game import ConnectFourGame as _ConnectFourGameLogic
+from core.tictactoe_game import TicTacToeGame as _TicTacToeGameLogic
 
 class ChessGameInstance(GameInstance):
     """Server-side chess session with authoritative board."""
     def __init__(self, room_id: str):
         super().__init__(room_id=room_id)
         self.chess = _ChessGameLogic()
+
+class TicTacToeInstance(GameInstance):
+    """Server-side tic-tac-toe session."""
+    def __init__(self, room_id: str):
+        super().__init__(room_id=room_id)
+        self.tictactoe = _TicTacToeGameLogic()
+
+class ConnectFourInstance(GameInstance):
+    """Server-side Connect Four session."""
+    def __init__(self, room_id: str):
+        super().__init__(room_id=room_id)
+        self.connectfour = _ConnectFourGameLogic()
 
 
 class GameManager:
@@ -114,6 +128,24 @@ class GameManager:
         """Reset a chess room to the starting position."""
         if room_id in self.games:
             self.games[room_id] = ChessGameInstance(room_id=room_id)
+
+    def get_or_create_tictactoe(self, room_id: str) -> TicTacToeInstance:
+        if room_id not in self.games:
+            self.games[room_id] = TicTacToeInstance(room_id=room_id)
+        elif not isinstance(self.games[room_id], TicTacToeInstance):
+            self.games[room_id] = TicTacToeInstance(room_id=room_id)
+        game = self.games[room_id]
+        game.last_updated = datetime.now(timezone.utc).timestamp()
+        return game
+
+    def get_or_create_connectfour(self, room_id: str) -> ConnectFourInstance:
+        if room_id not in self.games:
+            self.games[room_id] = ConnectFourInstance(room_id=room_id)
+        elif not isinstance(self.games[room_id], ConnectFourInstance):
+            self.games[room_id] = ConnectFourInstance(room_id=room_id)
+        game = self.games[room_id]
+        game.last_updated = datetime.now(timezone.utc).timestamp()
+        return game
 
     def get_game(self, room_id: str) -> Optional[GameInstance]:
         return self.games.get(room_id)

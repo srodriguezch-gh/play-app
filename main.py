@@ -13,7 +13,7 @@ from fastapi.templating import Jinja2Templates
 
 from core.config import get_settings
 from core.logging_config import setup_logging
-from web.routes import players, tasks
+from web.routes import games, players, tasks
 from core.game_manager import game_manager
 from web import socket_events
 from services.platform_scraper import PlatformScraper
@@ -64,6 +64,7 @@ templates = Jinja2Templates(directory="web/templates")
 # Routes
 app.include_router(players.router)
 app.include_router(tasks.router)
+app.include_router(games.router)
 
 
 @app.get("/health")

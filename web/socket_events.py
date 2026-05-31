@@ -8,8 +8,7 @@ import socketio
 
 from core.game_manager import game_manager
 from core.calypso import bot_service
-from core.db import Player, async_session
-from sqlalchemy import select
+from core.db import Player, Wallet, async_session
 
 logger = logging.getLogger(__name__)
 
@@ -145,11 +144,12 @@ def register_events(sio: socketio.AsyncServer):
     @sio.event
     async def gameEnd(sid, data: dict):
         winner = data.get("winner")
-        loser = data.get("loser")
+        loser = data.get("losers")
         game = data.get("game")
         if not winner or not game:
             return
         async with async_session() as session:
+            # Update winner stats
             result = await session.execute(select(Player).where(Player.name == winner))
             winner_player = result.scalar_one_or_none()
             if winner_player:
@@ -157,6 +157,15 @@ def register_events(sio: socketio.AsyncServer):
                 game_wins[game] = game_wins.get(game, 0) + 1
                 winner_player.wins += 1
                 winner_player.game_wins = game_wins
+            # Credit winner's wallet
+            wallet_result = await session.execute(select(Wallet).where(Wallet.player_name == winner))
+            winner_wallet = wallet_result.scalar_one_or_none()
+            if winner_wallet is None:
+                from core.db import Wallet as _WalletModel
+                winner_wallet = _WalletModel(player_name=winner, balance=0)
+                session.add(winner_wallet)
+            winner_wallet.balance = (winner_wallet.balance or 0) + 10
+            # Update loser stats
             if loser:
                 result = await session.execute(select(Player).where(Player.name == loser))
                 loser_player = result.scalar_one_or_none()
