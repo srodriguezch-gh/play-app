@@ -293,3 +293,16 @@ async def simon_play(data: SimonPlayRequest):
         "round_complete": game.is_round_complete,
         "game_over": game.is_game_over,
     }
+
+
+# ---------------------------------------------------------------------------
+# Brain Sync
+# ---------------------------------------------------------------------------
+
+
+@router.get("/brain-context/{player_name}")
+async def get_brain_game_context(player_name: str):
+    """Load recent game context from brain for a player (for game resume/hints)."""
+    from services.brain_sync import load_brain_game_context
+    context = await load_brain_game_context(player_name)
+    return {"context": context or [], "player": player_name}

@@ -101,6 +101,81 @@ async def ready():
     return {"status": "ready"}
 
 
+@app.get("/api/v1/status")
+async def get_status() -> dict:
+    """Return value metrics for play-app.
+
+    This endpoint provides metrics that indicate whether the kids are completing
+    their tasks and being engaged with the gamification system.
+
+    Returns task completion rates and points earned per child.
+    """
+    from datetime import datetime, timedelta, timezone
+    from sqlalchemy import func, select
+    from core.db import async_session, Player, Task, Transaction
+
+    try:
+        now = datetime.now(timezone.utc)
+        week_ago = (now - timedelta(days=7)).replace(tzinfo=None)
+
+        async with async_session() as session:
+            # Get task completion stats
+            total_tasks_result = await session.execute(select(func.count(Task.id)))
+            total_tasks = total_tasks_result.scalar() or 0
+
+            completed_tasks_result = await session.execute(
+                select(func.count(Task.id)).where(Task.is_completed == True)
+            )
+            completed_tasks = completed_tasks_result.scalar() or 0
+
+            approved_tasks_result = await session.execute(
+                select(func.count(Task.id)).where(Task.is_approved == True)
+            )
+            approved_tasks = approved_tasks_result.scalar() or 0
+
+            # Get tasks created this week
+            week_tasks_result = await session.execute(
+                select(func.count(Task.id)).where(Task.created_at >= week_ago)
+            )
+            week_tasks = week_tasks_result.scalar() or 0
+
+            # Calculate completion rate
+            task_completion_rate = approved_tasks / total_tasks if total_tasks > 0 else 0
+
+            # Get points earned per child this week
+            points_result = await session.execute(
+                select(
+                    Transaction.child_name,
+                    func.sum(Transaction.amount).label("points")
+                ).where(
+                    Transaction.kind == "earn",
+                    Transaction.created_at >= week_ago
+                ).group_by(Transaction.child_name)
+            )
+            points_by_child = {row.child_name: float(row.points or 0) for row in points_result}
+
+            # Count players
+            player_count_result = await session.execute(select(func.count(Player.name)))
+            player_count = player_count_result.scalar() or 0
+
+            return {
+                "task_completion_rate": round(task_completion_rate, 2),
+                "total_tasks": total_tasks,
+                "approved_tasks": approved_tasks,
+                "week_tasks_created": week_tasks,
+                "points_by_child": points_by_child,
+                "active_players": player_count,
+                "timestamp": now.isoformat(),
+            }
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Status endpoint error: {e}")
+        return {
+            "error": str(e),
+            "task_completion_rate": None,
+        }
+
+
 @app.get("/")
 async def index(request: Request):
     return templates.TemplateResponse("dashboard.html", {

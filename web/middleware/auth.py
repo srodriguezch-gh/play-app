@@ -8,7 +8,7 @@ from core.db import Session, async_session
 from sqlalchemy import select
 
 
-PROTECTED_PATHS = re.compile(r"^(?!/login|/api/session|/health|/ready|/static)(/.*)?$")
+PROTECTED_PATHS = re.compile(r"^(?!/login|/api/session|/health|/ready|/static|/api/v1/status)(/.*)?$")
 COOKIE_NAME = "play_session"
 
 

@@ -1,26 +1,55 @@
-# Play Spec
+# Play App Spec
 
 ## Purpose
-- Lightweight multiplayer game hub for family play with PIN-based authentication.
-- Solves family engagement with games, task tracking, and wallet rewards.
-
-## Scope
-- In scope: PIN authentication, game selection, player state, leaderboard, tasks, wallet.
-- Out of scope: enterprise-style dashboards, external authentication.
+Lightweight multiplayer game hub for family play with PIN-based authentication.
 
 ## Business Value
-- Primary ROI: family engagement and repeat use.
-- Secondary ROI: simple shared play platform with gamification.
-- Success metrics: session length, repeat plays, task completion rate, low friction.
+- Primary ROI: family engagement and repeat use
+- Secondary ROI: task completion through gamification
+- Success metrics: session_length, repeat_plays, task_completion_rate
 
-## UX Standard
-- Browser title: `Play`
-- Header: `silrod | Play`
-- Favicon: `https://home.silrod.org/static/silrod_logo.svg`
-- Layout: shared silrod shell via `silrod-ui` macros
-- Theme: `silrod.css` + `silrod-components.css`
-- Navigation: shared `shell_header`/`shell_footer` from silrod-ui
-- Footer: dark (`bg-slate-800`) with "Silvio Rodriguez © 2026"
+## Tech Stack
+- **Stack**: FastAPI + PostgreSQL + Jinja2/HTMX + Socket.IO
+- **Port**: 3001
+- **Container**: play-app
+- **Host**: BOSGAME (192.168.5.98) - MOVED from NUC
+- **Database**: PostgreSQL (shared postgres container)
+
+## Directory Structure
+```
+/home/silvio/apps/play-app/
+├── main.py              # FastAPI app entry point
+├── config.py            # Settings
+├── database.py          # DB models
+├── auth.py              # PIN auth + middleware
+├── web/
+│   ├── main.py        # API routes
+│   ├── templates/     # Jinja2 templates
+│   └── static/        # Static assets
+└── docs/
+    └── app-spec.md
+```
+
+## API Endpoints
+
+### Value Metrics
+| Endpoint | Method | Auth | Description |
+|---------|--------|------|-------------|
+| `/api/v1/status` | GET | No | Value metrics (sessions, tasks, engagement) |
+| `/health` | GET | No | Health check |
+
+### Status Response (`/api/v1/status`)
+```json
+{
+  "task_completion_rate": 1.0,
+  "total_tasks": 1,
+  "approved_tasks": 1,
+  "week_tasks_created": 1,
+  "points_by_child": {"Emma": 5.0},
+  "active_players": 3,
+  "timestamp": "2026-06-01T..."
+}
+```
 
 ## Authentication
 - **Method:** 4-digit PIN per player (Emma, Mateo, Dad)
@@ -28,70 +57,70 @@
 - **Subsequent logins:** player selects name, enters PIN → verified against stored hash
 - **Session:** HttpOnly cookie (`play_session`), SameSite=lax, 30-day TTL
 - **Rate limiting:** 5 failed attempts per player+IP → 5-minute lockout
-- **Logout:** POST `/logout` clears the session cookie
 - **Protected routes:** all except `/login`, `/health`, `/ready`, `/static/*`
 
-## Information Architecture
-- Routes:
-  - `GET /login` — player + PIN entry form
-  - `POST /login` — authenticate, set session cookie
-  - `POST /logout` — clear session
-  - `GET /` — game dashboard (protected)
-  - `GET /leaderboard` — player rankings (protected)
-  - `GET /tasks` — task management (protected)
-  - `GET /games/chess` — Chess vs AI (Calypso) (protected)
-  - `GET /games/tictactoe` — Tic-Tac-Toe local 2P (protected)
-  - `GET /games/connectfour` — Connect Four vs AI (protected)
-  - `GET /games/rockpaperscissors` — RPS vs bot (protected)
-  - `GET /games/snake` — Snake high score (protected)
-  - `GET /games/hangman` — Hangman word game (protected)
-  - `GET /games/checkers` — Checkers vs AI (protected)
-  - `GET /games/simonsays` — Simon Says memory game (protected)
-  - `GET /games/wordsearch` — Word search race vs AI (protected)
-- API prefix: `/api/`
-  - `GET /api/players` — all players with stats and wallet balance
-  - `GET /api/tasks/{child}` — tasks for a player
-  - `POST /api/tasks` — create task
-  - `PATCH /api/tasks/{id}` — update task (complete, recurring increment)
-  - `POST /api/tasks/{id}/approve` — approve with PIN verification
-  - `DELETE /api/tasks/{id}` — delete task
-  - `POST /api/tasks/{id}/approve` — approve + credit wallet
-  - `GET /api/transactions/{child}` — transaction history
-  - `POST /api/transactions` — manual transaction
-  - `POST /api/payout/{child}` — mark approved tasks as paid
-  - `GET /api/wallet/{name}` — wallet balance
-  - `GET /api/session` — current logged-in player
-  - `GET /api/games/chess/move`, `/api/games/tictactoe/move`, etc. — game APIs
+## Key Routes
+| Route | Description |
+|-------|-------------|
+| `/login` | PIN entry form |
+| `/` | Game dashboard (protected) |
+| `/leaderboard` | Player rankings |
+| `/tasks` | Task management |
+| `/wallet/{player}` | Wallet balance |
+
+## Games Available
+- Chess vs AI
+- Tic-Tac-Toe local 2P
+- Connect Four vs AI
+- Rock Paper Scissors
+- Snake
+- Hangman
+- Checkers vs AI
+- Simon Says
+- Word Search
 
 ## Data Model
-- **Player:** name (PK), pin (bcrypt hash), wins, losses, game_wins (JSON), selfie (bool), created_at
-- **Wallet:** player_name (PK), balance (Numeric), updated_at
-- **Task:** id (PK), child_name, task_description, points, is_completed, is_approved, is_paid, is_recurring, series_total, series_count, last_increment_at, created_at
-- **Transaction:** id (PK), child_name, amount, description, kind, created_at
-- **PlayerCollection:** id (PK), player_name, game_id, collection_data (JSON), updated_at
-- **Achievement:** id (PK), platform, game_id, achievement_id, title, achieved (bool), timestamp
-- Storage: PostgreSQL via SQLAlchemy async
+- **Player:** name, pin_hash, wins, losses, game_wins (JSON)
+- **Wallet:** player_name, balance
+- **Task:** child_name, description, points, is_completed, is_approved, is_paid
+- **Transaction:** player_name, amount, description, kind
 
-## Design System Rules
-- Directory layout: Standard silrod app structure (`web/`, `core/`, `services/`)
-- Template layout: Uses `base.html` extending silrod-ui shell macros
-- Static assets: `web/static/` + served from `silrod-ui`
-- Shared shell: `shell_header(shell_label='Play')` and `shell_footer(shell_footer_label='Play')`
-- Auth: via `web/middleware/auth.py` (AuthMiddleware), routes in `web/routes/auth.py`
-- PIN auth: bcrypt hashing, rate limiting, session cookie
+## Environment Variables
+| Variable | Description |
+|----------|-------------|
+| `SILROD_APP_NAME` | App identifier |
+| `POSTGRES_HOST` | PostgreSQL host |
+| `POSTGRES_PORT` | PostgreSQL port |
+| `POSTGRES_USER` | PostgreSQL user |
+| `POSTGRES_PASSWORD` | PostgreSQL password |
+| `POSTGRES_DB` | Database name |
+| `PYTHONPATH` | Include /app and /app/silrod_core |
 
-## Tech Stack
-- FastAPI + Uvicorn + Python 3.12
-- Socket.IO for real-time game events
-- PostgreSQL via SQLAlchemy async (asyncpg driver)
-- Jinja2 templates + HTMX
-- python-chess for server-side chess validation
-- silrod-ui for shared shell/CSS/JS
-- silrod-core for logging and shared utilities
+## Deployment
+```bash
+# Via compose
+cd /home/silvio/bosgame-compose
+docker compose -f compose.infra.yml -f compose.apps.yml up -d play-app
 
-## Simplify / Improve ROI
-- Keep the entry dashboard minimal.
-- Hide game-specific clutter until needed.
-- Make replay and switching games immediate.
-- Wallet balance visible at a glance on dashboard.
-- Task approval requires PIN — no separate admin needed.
+# Manual rebuild
+cd /home/silvio/apps/play-app
+docker build --no-cache -t play-app:local .
+```
+
+## Health Monitoring
+- Watchdog monitors: `http://play-app:3001/`
+- Value metric: `http://play-app:3001/api/v1/status`
+
+## Recent Changes
+- 2026-06-01: Moved from NUC to BOSGAME (same host as other apps)
+- Added /api/v1/status endpoint for value metrics
+- Auth redirect fixed (excluded `/api/v1/status` from auth middleware)
+## Architect's Deep Review (2026-06-03)
+
+### Expert Game Design Analysis
+Needs a **Unified Infrastructure** for game state persistence and standard controller mapping.
+
+### Recommendations
+1. **Save-Game Brain Sync**: Store game states and high scores as "Memories" in the Brain app via direct API.
+2. **Standard Controller Layer**: Implement a unified mapping for Bluetooth/WebHID controllers to ensure consistent UX across all internal games.
+3. **Integrated Hub UI**: Transition to a lean "Game Shell" that manages the lifecycle (start/suspend/resume) of child game processes.

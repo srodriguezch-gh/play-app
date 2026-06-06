@@ -311,3 +311,7 @@ def register_events(sio: socketio.AsyncServer):
             await session.commit()
             players = await _get_players_map()
             await sio.emit("updatePlayers", players)
+
+        # Brain sync: save game result
+        from services.brain_sync import save_game_result
+        await save_game_result(winner, game or "unknown", winner, loser or "unknown", room_id or "")
