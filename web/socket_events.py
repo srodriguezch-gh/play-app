@@ -85,6 +85,13 @@ def register_events(sio: socketio.AsyncServer):
             logger.warning(f"Client connected without valid session: {sid}")
 
     @sio.event
+    async def webhidEvent(sid, payload):
+        # Forward raw HID input events (e.g., from Gamepad API) to server logic.
+        # For now we just log them; future extensions can process or validate.
+        logger.debug(f"WebHID event from {sid}: {payload}")
+        await _sio.emit("webhidAck", {"status": "received"}, to=sid)
+
+    @sio.event
     async def disconnect(sid):
         player_name = game_manager.remove_online(sid)
         logger.info(f"Client disconnected: {sid} ({player_name})")

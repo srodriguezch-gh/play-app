@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "app.html" %}
 
 {% block title %}Play{% endblock %}
 
@@ -138,6 +138,7 @@
 {% block scripts %}
 <script>
     const currentPlayer = {{ current_player | tojson }};
+    const socket = io(); // ensure socket is initialized
 
     function sendChallenge() {
         const opponent = document.getElementById("challenge-opponent").value;
@@ -170,11 +171,72 @@
             document.getElementById("stat-wins").textContent = p.wins;
             document.getElementById("stat-losses").textContent = p.losses;
             document.getElementById("stat-games").textContent = p.wins + p.losses;
-            document.getElementById("wallet-balance").textContent = "$" + (p.balance || 0).toFixed(2);
+            document.getElementById("wallet-balance").textContent = `$${(p.balance || 0).toFixed(2)}`;
         }
     });
 
+    // ---- Gamepad / WebHID integration ----
+    function initGamepad() {
+        if (!('getGamepads' in navigator)) {
+            console.warn('Gamepad API not supported');
+            return;
+        }
+        window.addEventListener('gamepadconnected', (e) => console.log('Gamepad connected', e.gamepad));
+        window.addEventListener('gamepaddisconnected', (e) => console.log('Gamepad disconnected', e.gamepad));
+        setInterval(pollGamepad, 100);
+    }
+
+    async function pollGamepad() {
+        const pads = navigator.getGamepads();
+        if (!pads) return;
+        for (const gp of pads) {
+            if (!gp) continue;
+            // Example mapping: button 0 -> save, button 1 -> load
+            if (gp.buttons[0]?.pressed) {
+                await saveCurrentState();
+            }
+            if (gp.buttons[1]?.pressed) {
+                await loadCurrentState();
+            }
+            // Forward raw HID data to server via socket.io
+            socket.emit('webhidEvent', {
+                index: gp.index,
+                buttons: gp.buttons.map(b => b.pressed),
+                axes: gp.axes
+            });
+        }
+    }
+
+    async function saveCurrentState() {
+        const game = window.location.pathname.split('/')[2] || 'unknown';
+        const state = { timestamp: Date.now() };
+        try {
+            const resp = await fetch(`/api/v1/webhid/save`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ game, state })
+            });
+            if (resp.ok) console.log('Game state saved');
+        } catch (e) { console.error('Save error', e); }
+    }
+
+    async function loadCurrentState() {
+        const game = window.location.pathname.split('/')[2] || 'unknown';
+        try {
+            const resp = await fetch(`/api/v1/webhid/load/${game}`);
+            if (resp.ok) {
+                const data = await resp.json();
+                console.log('Loaded state', data.state);
+                // TODO: apply the loaded state to the UI/game as needed
+            } else {
+                console.warn('No saved state');
+            }
+        } catch (e) { console.error('Load error', e); }
+    }
+
+    // Initialize
     socket.emit("login", currentPlayer);
     socket.emit("getPlayers");
+    initGamepad();
 </script>
 {% endblock %}
