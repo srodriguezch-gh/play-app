@@ -75,9 +75,13 @@ async def _delete_session(token: str) -> None:
 
 @router.get("/login")
 async def login_page(request: Request):
-    if request.cookies.get(PLAYER_COOKIE):
-        return RedirectResponse(url="/", status_code=303)
-    templates = Jinja2Templates(directory="web/templates")
+    token = request.cookies.get(PLAYER_COOKIE)
+    if token:
+        player = await _get_player_from_token_async(token)
+        if player:
+            return RedirectResponse(url="/", status_code=303)
+    # Use app's shared templates with silrod-core loader
+    from main import templates
     error = request.query_params.get("error", "")
     return templates.TemplateResponse("login.html", {"request": request, "error": error, "current_player": None})
 

@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% set shell_label = "Play" %}
+{% set current_path = request.url.path if request else '/leaderboard' %}
+{% set shell_nav = [
+    '<a href="/leaderboard" class="nav-link' ~ (' active' if current_path.startswith('/leaderboard') else '') ~ '"><i class="fas fa-trophy mr-1.5 opacity-60"></i>Leaderboard</a>',
+    '<a href="/tasks" class="nav-link' ~ (' active' if current_path.startswith('/tasks') else '') ~ '"><i class="fas fa-tasks mr-1.5 opacity-60"></i>Tasks</a>'
+] %}
+{% block page_title %}Play{% endblock %}
+{% block content %}{% block main_content %}{% endblock %}{% endblock %}

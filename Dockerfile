@@ -1,4 +1,4 @@
-FROM ghcr.io/srodriguezch-gh/silrod-base:latest AS builder
+FROM silrod-base:latest AS builder
 
 WORKDIR /app
 
@@ -6,16 +6,15 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --break-system-packages --upgrade pip setuptools wheel && \
     pip install --no-cache-dir -r requirements.txt
 
-COPY wheels/silrod_core-*.whl /tmp/
-RUN pip install --no-cache-dir --break-system-packages /tmp/silrod_core-*.whl
+
 
 COPY . .
 
-FROM ghcr.io/srodriguezch-gh/silrod-base:latest
+FROM silrod-base:latest
 
 WORKDIR /app
 
-COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 COPY --from=builder /app /app
 

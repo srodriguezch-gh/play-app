@@ -28,7 +28,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
             sess = result.scalars().one_or_none()
 
         if not sess:
-            return RedirectResponse(url="/login", status_code=303)
+            response = RedirectResponse(url="/login", status_code=303)
+            response.delete_cookie(COOKIE_NAME)
+            return response
 
         request.state.current_player = sess.player_name
         return await call_next(request)

@@ -17,6 +17,7 @@ from silrod_core.logging import setup_logging as _setup_logging
 from silrod_core.middleware.access_log import AccessLogMiddleware
 from silrod_core.middleware.tracking import TrackingMiddleware
 from web.routes import games, players, tasks, auth
+from services.webhid_controller import router as webhid_router
 from web.middleware.auth import AuthMiddleware
 from core.game_manager import game_manager
 from web import socket_events
@@ -79,17 +80,19 @@ app.add_middleware(
 
 templates = Jinja2Templates(directory="web/templates")
 
+# Configure template loader to find silrod-core base.html
 try:
-    from silrod_ui import configure_template_loader
+    from silrod_ui import configure_template_loader, get_templates_dir
     configure_template_loader(templates, "web/templates")
-except ImportError:
-    pass
+    logger.info("Loaded silrod-core templates from: %s", get_templates_dir())
+except Exception as e:
+    logger.warning("Could not configure template loader: %s", e)
 
 app.include_router(auth.router)
 app.include_router(players.router)
 app.include_router(tasks.router)
 app.include_router(games.router)
-
+app.include_router(webhid_router)
 
 @app.get("/health")
 async def health():

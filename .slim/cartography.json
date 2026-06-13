@@ -1,0 +1,57 @@
+{
+  "metadata": {
+    "version": "1.0.0",
+    "last_run": "2026-06-11T14:07:26.562020Z",
+    "root": "/home/silvio/apps/play-app",
+    "include_patterns": [
+      "web/**/*.py",
+      "core/**/*.py",
+      "games/**/*.py",
+      "services/**/*.py"
+    ],
+    "exclude_patterns": [
+      "**/test*.py",
+      "tests/**",
+      "**/__pycache__/**"
+    ],
+    "exceptions": []
+  },
+  "file_hashes": {
+    "core/auth.py": "b202744e9f734f780ed24bd2ba2b6794",
+    "core/calypso.py": "ed5550384551458d71b2dadc680c9704",
+    "core/checkers_game.py": "72e60616d0ec931340c9ac6ee341dd13",
+    "core/chess_ai.py": "e4deaa0dba7c952175d8cb8d2374119a",
+    "core/chess_game.py": "6a636c9d2f9e8ffdc9a1b48644b6e82d",
+    "core/config.py": "188d0f0e0dd1d016c82734f1c06277b3",
+    "core/connectfour_game.py": "034164cd4dde19919e624efe47ae87ce",
+    "core/db.py": "36e84faf4d46dd0c15b5e6eb5fc7cc51",
+    "core/db_init.py": "02e9277c01c1fa5333fec70b962771fc",
+    "core/game_manager.py": "3668a5aba72ffc2df74eaec817b48431",
+    "core/hangman_game.py": "c3988fb842970105d50eae4b1e47fbf8",
+    "core/logging_config.py": "f5f86bc77f504387e9a4346942677fa6",
+    "core/rps_game.py": "9c4768d7c5abc2ea3a62249f95a56cf1",
+    "core/simon_game.py": "c4da9a5faa512b1a41ae3c8def9c2e4d",
+    "core/snake_game.py": "b53f17f04fc67205d3d42c97bd3888ff",
+    "core/tictactoe_game.py": "aecc7d37d7e0edc5769a64a5e88722f6",
+    "core/wordsearch_game.py": "7ebb29e14e2634a2d97cea83ee73ce0b",
+    "services/brain_sync.py": "fb19a2472a341a4db8edc6ed12610e66",
+    "services/platform_scraper.py": "ac59c63809dca958f05f35800355bd36",
+    "services/webhid_controller.py": "ae2317e6731b1ca6c463b4f087e2ac31",
+    "web/middleware/__init__.py": "d41d8cd98f00b204e9800998ecf8427e",
+    "web/middleware/auth.py": "e77de431f7c5b89d20503f159c97575f",
+    "web/routes/__init__.py": "d41d8cd98f00b204e9800998ecf8427e",
+    "web/routes/auth.py": "c33971834d8e17ea62af20d0f49fe778",
+    "web/routes/games.py": "2eb376e0d72d11a6c034db107c67804d",
+    "web/routes/players.py": "a4905c811053ef6b6dd2f6891371b93f",
+    "web/routes/tasks.py": "f09198281cebe6e0a0730d6ae3d2cd56",
+    "web/socket_events.py": "25213e9baef3618a4e9a3437e4b7bef9"
+  },
+  "folder_hashes": {
+    "web/routes": "6f36f69950268f00cb8be5bdc7a581d6",
+    "web/middleware": "3b52cb5cf54de9e4c205776c4e60228a",
+    "web": "c6519ab1e30c2d848f92eb9e456cbd45",
+    "services": "7b715e7010fbf34c056e3513f6354244",
+    "core": "14572aef0bf9e7221a503294f1eae175",
+    ".": ""
+  }
+}
